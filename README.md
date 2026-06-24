@@ -107,12 +107,3 @@ python -m unittest discover -s tests
 ```
 
 ---
-
-## 📋 Interview Questions & Answers preparation
-
-* **Q: Why use DBSCAN instead of K-Means?**
-  * *A*: K-Means forces every single data point into a cluster (spherical grouping), making it highly sensitive to outliers. DBSCAN defines clusters based on spatial density (`eps` and `min_samples`), allowing it to naturally capture complex shapes and classify sparse, irregular records as outliers (noise). This is ideal for detecting bots or reseller checkout scripts.
-* **Q: How does DBSCAN handle out-of-sample (new) customer data?**
-  * *A*: It doesn't natively. To solve this transductive clustering limitation, we train a K-Nearest Neighbors (KNN) classifier (`k=3`) wrapper using the spatial cluster coordinates created by DBSCAN. New customer data is scaled and passed to the KNN classifier to obtain their persona segment.
-* **Q: Why exclude ReturnRate from the Logistic Regression Return Risk Model features?**
-  * *A*: Including `ReturnRate` directly in the training features would create a severe data leakage issue (since the target risk label itself is defined by whether `ReturnRate > 15%`). The model would learn a trivial rule. Instead, the risk model is trained strictly on `Frequency` and `Monetary` net spend features.
