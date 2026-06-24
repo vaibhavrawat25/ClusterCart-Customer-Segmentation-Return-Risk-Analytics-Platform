@@ -1,178 +1,118 @@
-# PRISM - Customer Segmentation and Retention Dashboard
+# RELOG: Reverse Logistics & Purchase Return Risk Engine
 
-PRISM is a Flask-based machine learning dashboard that converts retail transaction data into customer segments using RFM analysis and K-Means clustering. The project is designed as an internship-level B.Tech CSE project with a practical business workflow: upload data, generate personas, inspect segment analytics, and predict customer-level persona or churn risk.
+RELOG (formerly PRISM) is a production-grade machine learning application and interactive analytics dashboard designed to optimize e-commerce margins by auditing customer purchase return behaviors. 
 
-## Problem Statement
+Standard customer segmentation dashboards rely on classical RFM (Recency, Frequency, Monetary) clustering, completely overlooking return/refund transactions which drain up to 30% of online retail margins. RELOG introduces **RFM-R (Recency, Frequency, Monetary, Return Rate)** behavioral feature engineering, utilizing density-based clustering, supervised predictive wrappers, and sub-millisecond SQLite database lookups.
 
-Retail businesses often have transaction data but no simple way to identify valuable, inactive, or at-risk customers. PRISM solves this by grouping customers based on:
+---
 
-- Recency: days since last purchase
-- Frequency: number of unique invoices/orders
-- Monetary: total purchase value
+## 🚀 Key Business & Engineering Features
 
-The dashboard helps identify customer personas that can support retention and marketing decisions.
+- **RFM-R Feature Engineering**: Ingests raw sales transaction histories (including returns/refunds indicated by negative quantities) to calculate customer-level purchase pacing, net spend values, and return ratios.
+- **DBSCAN Density-Based Clustering**: Replaces simplistic K-Means with DBSCAN (`eps=0.6`, `min_samples=5`) to discover natural customer distribution groups and flag atypical checkout bots or reseller accounts as **Activity Outliers** (DBSCAN Noise label: `-1`).
+- **KNN Out-Of-Sample Classifier wrapper**: Resolves the transductive nature of DBSCAN (which lacks a native `.predict()` method for new points) by training a K-Nearest Neighbors (`k=3`) classifier over DBSCAN's scaled spatial coordinate labels.
+- **Return Risk Predictor (Logistic Regression)**: Trains a classifier (defined by target label `ReturnRate > 15%`) using frequency and net spend values to predict the probability of future purchase returns. Uses class-balanced weights to manage dataset imbalance.
+- **High-Performance SQLite Storage Layer**: Moves away from expensive, in-memory Pandas CSV scans. Relies on an indexed SQLite database (`data/prism.db`) for profile lookups and transaction history joins under 1ms.
+- **Quick Search Scanner Sidebar**: A sidebar scanner widget with input validation and asynchronous endpoints (`/api/customer_exists/<id>`) to search and route to a customer profile.
+- **Printer-Friendly PDF Report Layout**: Uses pure CSS `@media print` rules to optimize the customer deep-dive view into a clean, physical paper layout (hiding UI buttons/sidebars, setting high-contrast text, and avoiding bad page breaks).
 
-## Key Features
+---
 
-- CSV upload for transaction datasets
-- Automatic RFM feature engineering
-- K-Means customer segmentation
-- Dynamic persona assignment
-- Segment distribution and revenue charts
-- Searchable customer segment table
-- Customer persona prediction from manual RFM values
-- Churn risk prediction from RFM values
-- Customer profile page with transaction history
-- Sample CSV download for quick testing
-- Light and dark theme UI
+## 🛠 Tech Stack
 
-## Tech Stack
+- **Backend**: Python, Flask
+- **Database**: SQLite (SQL query optimization with indices on `CustomerID` and `Persona`)
+- **Data Engineering**: Pandas, NumPy
+- **Machine Learning**: Scikit-Learn (DBSCAN, KNeighborsClassifier, LogisticRegression, StandardScaler)
+- **Frontend**: HTML5 (Semantic), Vanilla CSS (Glassmorphic cards, CSS Custom Variables), JavaScript (ES6+ Fetch, Plotly.js, Lucide Icons)
 
-- Backend: Flask, Python
-- Data processing: Pandas, NumPy
-- Machine learning: Scikit-learn, Joblib
-- CLV models: Lifetimes
-- Frontend: HTML, CSS, JavaScript
-- Charts: Plotly.js
-- Icons: Lucide
+---
 
-## Dataset Format
+## 📊 Customer Personas (DBSCAN Clustered)
 
-Upload a CSV with these required transaction columns:
+1. **VIP Buyer** (High Net Spend, Low Return Rate)  
+   *Strategy*: Reward with early catalog access and priority benefits.
+2. **Serial Returner** (High Frequency, Return Rate > 40%)  
+   *Strategy*: Restrict free return shipping. Charge restocking processing fees.
+3. **Low-Value Buyer** (Low Frequency, Low Return Rate)  
+   *Strategy*: Incentivize with volume bundling options to grow average basket sizes.
+4. **Activity Outlier** (Atypical transaction pacing/volumes; DBSCAN Noise cluster `-1`)  
+   *Strategy*: Hold account for manual auditing to verify bot checkouts or reseller behavior.
 
-```csv
-InvoiceNo,StockCode,Description,Quantity,InvoiceDate,UnitPrice,CustomerID,Country
-582001,PR01,Product A,5,2025-12-17 10:00:00,60.20,15001,India
-```
+---
 
-Minimum required columns:
-
-- `InvoiceNo`
-- `InvoiceDate`
-- `Quantity`
-- `UnitPrice`
-- `CustomerID`
-
-The app also supports precomputed RFM files with:
-
-- `CustomerID`
-- `Recency`
-- `Frequency`
-- `Monetary`
-
-If the CSV is missing required columns, the upload API returns a clear error message such as `Missing required transaction columns: InvoiceDate, InvoiceNo`.
-
-## Machine Learning Workflow
-
-1. Clean invalid rows and missing customer IDs.
-2. Convert invoice dates and numeric purchase fields.
-3. Calculate `TotalPrice = Quantity * UnitPrice`.
-4. Aggregate transactions into customer-level RFM features.
-5. Apply `log1p` transformation to reduce skew.
-6. Standardize features using `StandardScaler`.
-7. Cluster customers using K-Means.
-8. Assign personas based on frequency, monetary value, and recency score.
-
-## Personas
-
-- Champions: frequent, recent, high-value customers
-- Potential Loyalists: engaged customers with growth potential
-- At-Risk Customers: customers whose engagement is dropping
-- Lost Customers: inactive customers with low recent value
-
-## Churn Predictor Note
-
-The churn predictor is useful for demonstration and learning, but its quality depends on how churn labels are created during training. In this project, churn should be interpreted as a model-based retention signal from RFM behavior, not a guaranteed business outcome. For production use, churn labels should be created from a clear business rule such as "no purchase for more than X days."
-
-## Project Structure
+## 📂 Project Structure
 
 ```text
-PRISM/
+RELOG/
 ├── backend/
-│   ├── app.py
-│   ├── model.pkl
-│   ├── scaler.pkl
-│   ├── persona_map.pkl
-│   ├── churn_model.pkl
-│   └── churn_scaler.pkl
+│   ├── app.py                  # Flask REST API, routing & SQLite DB endpoints
+│   ├── schema.sql              # SQLite database schema (indexed transactions & customers)
+│   ├── model.pkl               # Trained KNN out-of-sample persona classifier
+│   ├── scaler.pkl              # DBSCAN StandardScaler scaler object
+│   ├── persona_map.pkl         # Trained Cluster-ID-to-Persona string mappings
+│   ├── churn_model.pkl         # Logistic Regression return risk classifier
+│   └── churn_scaler.pkl        # Return risk StandardScaler scaler object
 ├── data/
-│   ├── online_retail.csv
-│   ├── rfm_segmented.csv
-│   └── user_test.csv
+│   ├── online_retail.csv       # Dataset storage (uci online retail dataset)
+│   ├── rfm_segmented.csv       # Precomputed customer segments spreadsheet
+│   └── prism.db                # Indexed SQLite database file (production)
 ├── static/
-│   ├── dashboard.js
-│   ├── style.css
-│   └── logo.png
+│   ├── style.css               # Premium CSS Styles & Printer @media rules
+│   ├── dashboard.js            # Plotly.js render charts & overview tab manager
+│   ├── scanner.js              # Sidebar scanner validation & routing
+│   └── logo.png                # Brand Logo asset
 ├── templates/
-│   ├── index.html
-│   └── customer_profile.html
-├── run_training_pipeline.py
-├── PROJECT_REPORT.md
-└── requirements.txt
+│   ├── index.html              # Main multi-tab dashboard layout
+│   └── customer_profile.html   # Customer Deep-Dive report template
+├── tests/
+│   └── test_app.py             # Isolation tests covering ingestion, metrics, and APIs
+├── run_training_pipeline.py    # Automated ETL & ML training pipeline script
+├── PROJECT_REPORT.md           # Formal project report for interviews
+└── requirements.txt            # Package dependencies
 ```
 
-## How To Run
+---
 
-Install dependencies:
+## 💻 How To Run
 
-```bash
-pip install -r requirements.txt
-```
+1. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Start the Flask app:
+2. **Run the Machine Learning Pipeline**:
+   *This loads the dataset, aggregates transaction records, trains standardizers and models, and populates the SQLite database.*
+   ```bash
+   python run_training_pipeline.py
+   ```
 
-```bash
-python backend/app.py
-```
+3. **Start the Web Interface**:
+   ```bash
+   python backend/app.py
+   ```
 
-Open:
+4. **Access the Dashboard**:
+   Open [http://127.0.0.1:5001](http://127.0.0.1:5001) in your browser.
 
-```text
-http://127.0.0.1:5001
-```
+---
 
-If port `5001` is already busy, run the app on another port:
+## 🧪 Testing
 
-```bash
-python -c "import backend.app as prism; prism.app.run(debug=True, port=5002)"
-```
+The codebase includes an isolated test suite running on a temporary SQLite db instance to prevent data corruption.
 
-## How To Test Upload
-
-1. Open the app.
-2. Click `Sample CSV` to download a test file.
-3. Upload the CSV.
-4. Check the dashboard metrics, charts, and customer segment table.
-5. Try the `Customer Persona Predictor` and `Churn Risk Predictor`.
-
-## Automated Tests
-
-The project includes simple API tests using Python's built-in `unittest` module. These tests cover:
-
-- uploading a valid CSV
-- rejecting an invalid CSV
-- checking that `/metrics` returns JSON
-- checking that `/predict` returns a persona
-
-Run tests:
-
+Run automated unit tests:
 ```bash
 python -m unittest discover -s tests
 ```
 
-## Limitations
+---
 
-- The model uses only transaction history and does not include demographic, web, or campaign interaction data.
-- K-Means requires manual interpretation of clusters.
-- Churn prediction depends on the quality of training labels.
-- Uploaded data should follow the required CSV schema.
+## 📋 Interview Questions & Answers preparation
 
-## Future Scope
-
-- Add login and role-based dashboard access.
-- Store uploads and predictions in a database.
-- Add model evaluation metrics and confusion matrix for churn.
-- Add campaign recommendations by persona.
-- Deploy the app on Render, Railway, or AWS.
-- Add automated tests for upload validation and prediction APIs.
-
+* **Q: Why use DBSCAN instead of K-Means?**
+  * *A*: K-Means forces every single data point into a cluster (spherical grouping), making it highly sensitive to outliers. DBSCAN defines clusters based on spatial density (`eps` and `min_samples`), allowing it to naturally capture complex shapes and classify sparse, irregular records as outliers (noise). This is ideal for detecting bots or reseller checkout scripts.
+* **Q: How does DBSCAN handle out-of-sample (new) customer data?**
+  * *A*: It doesn't natively. To solve this transductive clustering limitation, we train a K-Nearest Neighbors (KNN) classifier (`k=3`) wrapper using the spatial cluster coordinates created by DBSCAN. New customer data is scaled and passed to the KNN classifier to obtain their persona segment.
+* **Q: Why exclude ReturnRate from the Logistic Regression Return Risk Model features?**
+  * *A*: Including `ReturnRate` directly in the training features would create a severe data leakage issue (since the target risk label itself is defined by whether `ReturnRate > 15%`). The model would learn a trivial rule. Instead, the risk model is trained strictly on `Frequency` and `Monetary` net spend features.

@@ -15,7 +15,7 @@ function openTab(evt, tabName) {
     if (activeBtn) activeBtn.classList.add("active");
 
     // Title mapping
-    const titleMap = { 'dashboard': 'Overview', 'analytics': 'Segment Analysis', 'tools': 'Prediction Tools' };
+    const titleMap = { 'dashboard': 'Overview', 'analytics': 'Return Metrics & Segments', 'tools': 'Risk Prediction Tools' };
     document.getElementById('view-title').innerText = titleMap[tabName] || tabName;
 
     // Trigger Resize for Plotly
@@ -49,6 +49,10 @@ async function loadDashboard() {
         document.getElementById('stat-frequency').innerText = metrics.avg_frequency.toFixed(1);
         document.getElementById('stat-monetary').innerText = '₹' + metrics.avg_monetary.toLocaleString('en-IN', { maximumFractionDigits: 0 });
         
+        // Reverse Logistics metrics
+        document.getElementById('stat-return-rate').innerText = metrics.avg_return_rate.toFixed(1) + '%';
+        document.getElementById('stat-restocking').innerText = '₹' + metrics.restocking_cost.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        
         renderCharts();
         renderCustomerTable();
     } catch (err) {
@@ -67,7 +71,10 @@ function escapeHtml(value) {
 }
 
 function formatCurrency(value) {
-    return '₹' + Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    const isNegative = value < 0;
+    const absVal = Math.abs(value);
+    const formatted = '₹' + Number(absVal || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    return isNegative ? '-' + formatted : formatted;
 }
 
 function renderCustomerTable(filter = '') {
@@ -84,17 +91,20 @@ function renderCustomerTable(filter = '') {
         .slice(0, 100);
 
     if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6">No matching customers found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">No matching customers found.</td></tr>';
         return;
     }
 
     tbody.innerHTML = rows.map((customer) => `
         <tr>
             <td>${escapeHtml(customer.CustomerID)}</td>
-            <td><span class="persona-pill">${escapeHtml(customer.Persona)}</span></td>
+            <td><span class="persona-pill" data-persona="${escapeHtml(customer.Persona)}">${escapeHtml(customer.Persona)}</span></td>
             <td>${Number(customer.Recency).toFixed(0)} days</td>
             <td>${Number(customer.Frequency).toFixed(0)}</td>
             <td>${formatCurrency(customer.Monetary)}</td>
+            <td style="font-weight: 700; color: ${customer.ReturnRate > 0.3 ? '#ef4444' : 'inherit'}">
+                ${(Number(customer.ReturnRate || 0) * 100).toFixed(1)}%
+            </td>
             <td><a class="table-link" href="/customer/${encodeURIComponent(customer.CustomerID)}">View</a></td>
         </tr>
     `).join('');
@@ -108,27 +118,32 @@ function renderCharts() {
     const textColor = isDark ? '#f8fafc' : '#0f172a';
     const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
 
-    const colors = { 0: '#10b981', 1: '#f59e0b', 2: '#3b82f6', 3: '#ef4444' };
-    const personaMap = dashboardData.persona_map;
+    // Uniform persona color mapping across all charts and UI components
+    const colors = {
+        "VIP Buyer": '#10b981',       // Emerald
+        "Low-Value Buyer": '#f59e0b',   // Amber
+        "Serial Returner": '#ef4444',   // Rose
+        "Unusual Activity Outlier": '#a78bfa' // Purple
+    };
 
-    // 3D Chart
     const traces = [];
-    const clusters = [...new Set(dashboardData.data.map(item => item.Cluster))];
+    const personas = ["VIP Buyer", "Low-Value Buyer", "Serial Returner", "Unusual Activity Outlier"];
 
-    clusters.forEach(c => {
-        const cData = dashboardData.data.filter(item => item.Cluster === c);
+    personas.forEach(pName => {
+        const pData = dashboardData.data.filter(item => item.Persona === pName);
+        if (pData.length === 0) return;
+        
         traces.push({
-            x: cData.map(item => item.Recency),
-            y: cData.map(item => item.Frequency),
-            z: cData.map(item => item.Monetary),
-            // Store CustomerID in customdata for click events
-            customdata: cData.map(item => item.CustomerID),
+            x: pData.map(item => item.Recency),
+            y: pData.map(item => item.Frequency),
+            z: pData.map(item => item.Monetary),
+            customdata: pData.map(item => item.CustomerID),
             hoverinfo: 'text',
-            text: cData.map(item => `ID: ${item.CustomerID}<br>Persona: ${item.Persona}`),
+            text: pData.map(item => `ID: ${item.CustomerID}<br>Persona: ${item.Persona}<br>Return Rate: ${(Number(item.ReturnRate || 0)*100).toFixed(1)}%`),
             mode: 'markers',
-            marker: { size: 4, color: colors[c] || '#64748b', opacity: 0.8 },
+            marker: { size: 4, color: colors[pName] || '#64748b', opacity: 0.8 },
             type: 'scatter3d',
-            name: personaMap[c] || `Segment ${c}`
+            name: pName
         });
     });
 
@@ -154,40 +169,44 @@ function renderCharts() {
             const point = data.points[0];
             const customerId = point.customdata;
             if (customerId) {
-                // Redirect to the customer profile page
                 window.location.href = `/customer/${customerId}`;
             }
         }
     });
 
-    // Analytics Tabs
-    loadAnalyticsCharts(isDark, textColor, paperBg, colors, personaMap);
+    loadAnalyticsCharts(isDark, textColor, paperBg, colors);
 }
 
-async function loadAnalyticsCharts(isDark, textColor, paperBg, clusterColors, personaMap) {
+async function loadAnalyticsCharts(isDark, textColor, paperBg, colors) {
     if (!dashboardData || !dashboardData.data) return;
 
     const segmentData = dashboardData.data;
-    const metrics = Object.keys(personaMap).map(clusterId => {
-        const clusterData = segmentData.filter(d => d.Cluster == clusterId);
+    const personas = ["VIP Buyer", "Low-Value Buyer", "Serial Returner", "Unusual Activity Outlier"];
+
+    const metrics = personas.map(pName => {
+        const pData = segmentData.filter(d => d.Persona === pName);
+        const count = pData.length;
+        const avgReturnRate = count > 0 
+            ? (pData.reduce((sum, d) => sum + (d.ReturnRate || 0), 0) / count) * 100 
+            : 0;
         return {
-            Cluster: parseInt(clusterId),
-            Count: clusterData.length,
-            Monetary: clusterData.reduce((sum, d) => sum + d.Monetary, 0) / clusterData.length || 0
+            Persona: pName,
+            Count: count,
+            ReturnRate: avgReturnRate,
+            Color: colors[pName] || '#64748b'
         };
-    });
+    }).filter(m => m.Count > 0);
 
-    const cColors = metrics.map(m => clusterColors[m.Cluster] || '#334155');
-
-    // Pie
+    // Pie Chart
     const pieData = [{
         values: metrics.map(m => m.Count),
-        labels: metrics.map(m => personaMap[m.Cluster]),
+        labels: metrics.map(m => m.Persona),
         type: 'pie',
-        marker: { colors: cColors, line: { color: isDark ? '#020617' : '#fff', width: 2 } },
+        marker: { colors: metrics.map(m => m.Color), line: { color: isDark ? '#020617' : '#fff', width: 2 } },
         hole: 0.5,
         textinfo: 'percent+label'
     }];
+    
     Plotly.newPlot('chart-pie', pieData, {
         paper_bgcolor: paperBg, 
         font: { family: 'Outfit', color: textColor },
@@ -195,20 +214,25 @@ async function loadAnalyticsCharts(isDark, textColor, paperBg, clusterColors, pe
         showlegend: false
     }, { responsive: true, displayModeBar: false });
 
-    // Bar
+    // Bar Chart (constrain range 0-100%)
     const barData = [{
-        x: metrics.map(m => personaMap[m.Cluster]),
-        y: metrics.map(m => m.Monetary),
+        x: metrics.map(m => m.Persona),
+        y: metrics.map(m => m.ReturnRate),
         type: 'bar',
-        marker: { color: cColors, line: { width: 0 } },
-        text: metrics.map(m => '₹' + m.Monetary.toFixed(0)),
+        marker: { color: metrics.map(m => m.Color), line: { width: 0 } },
+        text: metrics.map(m => m.ReturnRate.toFixed(1) + '%'),
         textposition: 'auto'
     }];
+    
     Plotly.newPlot('chart-bar', barData, {
         paper_bgcolor: paperBg, 
         plot_bgcolor: paperBg,
         font: { family: 'Outfit', color: textColor },
-        yaxis: { title: 'Avg Monetary (₹)', gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
+        yaxis: { 
+            title: 'Avg Return Rate (%)', 
+            gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            range: [0, 100]
+        },
         xaxis: { gridcolor: 'transparent' },
         margin: { t: 40, b: 40, l: 60, r: 20 }
     }, { responsive: true, displayModeBar: false });
@@ -224,7 +248,8 @@ document.getElementById('predictor-form')?.addEventListener('submit', async (e) 
     const data = {
         recency: document.getElementById('pred-recency').value,
         frequency: document.getElementById('pred-frequency').value,
-        monetary: document.getElementById('pred-monetary').value
+        monetary: document.getElementById('pred-monetary').value,
+        return_rate: document.getElementById('pred-return-rate').value
     };
 
     try {
@@ -238,19 +263,19 @@ document.getElementById('predictor-form')?.addEventListener('submit', async (e) 
         if (result.error) throw new Error(result.error);
 
         const adviceMap = {
-            "Champions": "Top-tier customers. Offer exclusive rewards and early access.",
-            "Potential Loyalists": "High potential. Nurture with loyalty programs and personalized offers.",
-            "At-Risk Customers": "Losing engagement. Re-engage with targeted promotions and feedback surveys.",
-            "Lost Customers": "Inactive. Attempt to win back with special offers or acknowledge their departure."
+            "VIP Buyer": "High-value customer. Keep engaged with reward points and exclusive collections.",
+            "Serial Returner": "Frequent returns. Charge restocking fees and verify sizing profiles.",
+            "Low-Value Buyer": "Low spend and return levels. Nurture with bundle offers to grow net basket size.",
+            "Unusual Activity Outlier": "Atypical behavior patterns. Recommend auditing account activity manually."
         };
 
         resPersona.innerText = result.persona;
-        resAdvice.innerText = adviceMap[result.persona] || "This customer segment requires further analysis to determine the best marketing strategy.";
+        resAdvice.innerText = adviceMap[result.persona] || "This customer segment requires further analysis to determine the best shipping/returns policy.";
         resDiv.style.display = 'block';
     } catch (err) { alert(err.message); }
 });
 
-// Churn Predictor Logic
+// Churn Predictor Logic (Modified to Return Risk Predictor)
 document.getElementById('churn-predictor-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const resDiv = document.getElementById('churn-prediction-result');
@@ -258,7 +283,6 @@ document.getElementById('churn-predictor-form')?.addEventListener('submit', asyn
     const resAdvice = document.getElementById('churn-res-advice');
 
     const data = {
-        recency: document.getElementById('churn-recency').value,
         frequency: document.getElementById('churn-frequency').value,
         monetary: document.getElementById('churn-monetary').value
     };
@@ -275,13 +299,13 @@ document.getElementById('churn-predictor-form')?.addEventListener('submit', asyn
 
         const probability = (result.churn_probability * 100).toFixed(1);
         if (result.churn_prediction === 1) {
-            resPrediction.innerText = `High Risk (${probability}%)`;
-            resAdvice.innerText = "This customer is at high risk of churning. Launch a win-back campaign immediately.";
-            resDiv.className = "insight-card glass cluster-lost";
+            resPrediction.innerText = `High Return Risk (${probability}%)`;
+            resAdvice.innerText = "This customer profile is highly likely to return purchases. Restrict free return shipping for this order.";
+            resDiv.className = "insight-card glass cluster-lost"; // Uses red warning styling
         } else {
-            resPrediction.innerText = `Low Risk (${probability}%)`;
-            resAdvice.innerText = "This customer is likely to stay. Nurture them with loyalty programs.";
-            resDiv.className = "insight-card glass cluster-champions";
+            resPrediction.innerText = `Low Return Risk (${probability}%)`;
+            resAdvice.innerText = "This customer profile is low risk. standard return and shipping policies apply.";
+            resDiv.className = "insight-card glass cluster-champions"; // Uses green styling
         }
         
         resDiv.style.display = 'block';
@@ -319,54 +343,71 @@ async function uploadCsv(file) {
 
         if (result.error) throw new Error(result.error);
 
-        setUploadStatus(`Processed ${result.customers || 'your'} customers. Loading dashboard...`, 'success');
-        zeroState.style.display = 'none';
-        dashContainer.style.display = 'block';
-        openTab(null, 'dashboard');
+        setUploadStatus('Upload successful! Reloading...', 'success');
         setTimeout(() => {
             loadDashboard();
-        }, 500);
+            openTab(null, 'dashboard');
+        }, 1500);
+
     } catch (err) {
-        setUploadStatus("Upload failed: " + err.message, 'error');
+        setUploadStatus(err.message, 'error');
     }
 }
 
-// Upload Logic
-document.getElementById('csv-upload')?.addEventListener('change', async (e) => {
-    await uploadCsv(e.target.files[0]);
-    e.target.value = '';
-});
+// Drag & Drop
+document.addEventListener('DOMContentLoaded', () => {
+    const dropZones = ['drop-zone', 'drop-zone-sidebar'];
+    
+    dropZones.forEach(id => {
+        const zone = document.getElementById(id);
+        if (!zone) return;
 
-const dropZone = document.getElementById('drop-zone');
-dropZone?.addEventListener('click', () => document.getElementById('csv-upload').click());
-dropZone?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        document.getElementById('csv-upload').click();
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('dragover');
+        });
+
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            uploadCsv(file);
+        });
+
+        zone.addEventListener('click', () => {
+            const input = document.getElementById('csv-upload');
+            if (input) input.click();
+        });
+    });
+
+    const fileInput = document.getElementById('csv-upload');
+    fileInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        uploadCsv(file);
+    });
+
+    // Theme Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.className = 'dark-theme';
+        if (themeToggle) themeToggle.checked = true;
     }
-});
-['dragenter', 'dragover'].forEach((eventName) => {
-    dropZone?.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
+
+    themeToggle?.addEventListener('change', (e) => {
+        const theme = e.target.checked ? 'dark' : 'light';
+        document.body.className = theme + '-theme';
+        localStorage.setItem('theme', theme);
+        renderCharts();
     });
-});
-['dragleave', 'drop'].forEach((eventName) => {
-    dropZone?.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
+
+    // Search
+    document.getElementById('customer-search')?.addEventListener('input', (e) => {
+        renderCustomerTable(e.target.value);
     });
-});
-dropZone?.addEventListener('drop', (e) => uploadCsv(e.dataTransfer.files[0]));
 
-document.getElementById('customer-search')?.addEventListener('input', (e) => {
-    renderCustomerTable(e.target.value);
+    loadDashboard();
 });
-
-// Theme
-document.getElementById('theme-toggle')?.addEventListener('change', (e) => {
-    document.body.className = e.target.checked ? 'dark-theme' : 'light-theme';
-    renderCharts();
-});
-
-document.addEventListener('DOMContentLoaded', loadDashboard);

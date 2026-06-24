@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PRISM | Intelligence Engine</title>
+    <title>RELOG | Reverse Logistics & Return Risk Engine</title>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Plotly.js -->
@@ -14,15 +14,23 @@
     <div class="prism-app">
         <aside class="sidebar">
             <div class="brand">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="PRISM Logo" class="logo-img">
-                <h1>PRISM</h1>
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="RELOG Logo" class="logo-img">
+                <h1>RELOG</h1>
+            </div>
+            <!-- Quick Search Scanner -->
+            <div class="sidebar-search no-print">
+                <div class="search-input-wrapper">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="sidebar-search-input" placeholder="Scan Customer ID..." autocomplete="off">
+                </div>
+                <div id="scanner-feedback" style="display: none;"></div>
             </div>
             <nav class="side-nav">
                 <button class="nav-btn active" id="nav-dashboard" onclick="openTab(event, 'dashboard')">
                     <i data-lucide="layout-dashboard"></i> Overview
                 </button>
                 <button class="nav-btn" id="nav-analytics" onclick="openTab(event, 'analytics')">
-                    <i data-lucide="bar-chart-3"></i> Segment Analysis
+                    <i data-lucide="bar-chart-3"></i> Return Metrics
                 </button>
                 <button class="nav-btn" id="nav-tools" onclick="openTab(event, 'tools')">
                     <i data-lucide="zap"></i> Prediction Tools
@@ -41,9 +49,9 @@
             <!-- Zero State / Welcome Hero -->
             <div id="zero-state" class="hero-section">
                 <div class="hero-content glass">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="PRISM" class="hero-logo">
-                    <h2>Welcome to PRISM</h2>
-                    <p>Upload transaction data to generate RFM segments, customer personas, and retention signals.</p>
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="RELOG" class="hero-logo">
+                    <h2>Welcome to RELOG Engine</h2>
+                    <p>Upload sales transaction data to analyze customer return rates, density clusters, and calculate purchase return probability.</p>
                     <div class="hero-actions">
                         <button class="btn-primary large" onclick="document.getElementById('csv-upload').click()">
                             <i data-lucide="upload-cloud"></i> Upload CSV to Begin
@@ -99,53 +107,67 @@
                         <div class="kpi-card glass">
                             <div class="kpi-header">
                                 <i data-lucide="indian-rupee" class="icon-monetary"></i>
-                                <span>Avg. Monetary</span>
+                                <span>Avg. Net Spend</span>
                             </div>
                             <div class="value" id="stat-monetary">-</div>
+                        </div>
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <i data-lucide="arrow-left-right" style="color: #ef4444;"></i>
+                                <span style="color: #ef4444;">Avg. Return Rate</span>
+                            </div>
+                            <div class="value" id="stat-return-rate" style="color: #ef4444;">-</div>
+                        </div>
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <i data-lucide="package-x" style="color: #f59e0b;"></i>
+                                <span style="color: #f59e0b;">Est. Restocking Cost</span>
+                            </div>
+                            <div class="value" id="stat-restocking" style="color: #f59e0b;">-</div>
                         </div>
                     </div>
 
                     <div class="viz-container">
                         <div class="card chart-large glass">
-                            <h3>RFM Customer Segments</h3>
+                            <h3>DBSCAN Density Segmentation (4D Space)</h3>
                             <div id="chart-3d" class="chart-box"></div>
                         </div>
                     </div>
 
                     <div class="prism-insights">
-                        <h2>The Persona Engine</h2>
+                        <h2>The Return Persona Engine (DBSCAN Clustered)</h2>
                         <div class="insight-grid">
                             <div class="insight-card cluster-champions">
                                 <div class="insight-header">
-                                    <h3>Champions</h3>
-                                    <span class="badge">Core Revenue</span>
+                                    <h3>VIP Buyers</h3>
+                                    <span class="badge">Core Profit</span>
                                 </div>
-                                <p class="pattern">Low R, High F, High M</p>
-                                <p class="strategy">Your most valuable customers. Reward them and leverage for testimonials.</p>
+                                <p class="pattern">Low R, High F, High M, Low Return</p>
+                                <p class="strategy">Your most profitable customers. Reward them with early VIP access and free shipping perks.</p>
                             </div>
                             <div class="insight-card cluster-loyalists">
                                 <div class="insight-header">
-                                    <h3>Potential Loyalists</h3>
-                                    <span class="badge">High Potential</span>
+                                    <h3>Low-Value Buyers</h3>
+                                    <span class="badge">Stable</span>
                                 </div>
-                                <p class="pattern">Mid R, Mid F, Mid M</p>
-                                <p class="strategy">Engaged customers. Nurture with loyalty programs and personalized offers.</p>
+                                <p class="pattern">Low F, Low M, Low Return</p>
+                                <p class="strategy">Low-cost customers with low returns. Nurture with bundle offers to grow average basket sizes.</p>
                             </div>
                             <div class="insight-card cluster-at-risk">
                                 <div class="insight-header">
-                                    <h3>At-Risk Customers</h3>
-                                    <span class="badge">Needs Attention</span>
+                                    <h3>Serial Returners</h3>
+                                    <span class="badge">Margin Risk</span>
                                 </div>
-                                <p class="pattern">High R, Low F, Low M</p>
-                                <p class="strategy">Customers who are slipping away. Re-engage with targeted promotions.</p>
+                                <p class="pattern">High F, High M, Return Rate > 40%</p>
+                                <p class="strategy">High shopping volume, but extremely high return rates. Restrict free return shipping and add restocking fees.</p>
                             </div>
-                            <div class="insight-card cluster-lost">
+                            <div class="insight-card cluster-lost" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);">
                                 <div class="insight-header">
-                                    <h3>Lost Customers</h3>
-                                    <span class="badge">Inactive</span>
+                                    <h3 style="color: #a78bfa;">Activity Outliers</h3>
+                                    <span class="badge" style="background: #8b5cf6;">DBSCAN Noise (-1)</span>
                                 </div>
-                                <p class="pattern">Very High R, Very Low F/M</p>
-                                <p class="strategy">Inactive customers. Attempt to win back with special offers or surveys.</p>
+                                <p class="pattern">Atypical transaction timing & size</p>
+                                <p class="strategy">Outliers flagged by density clustering. Flag for manual audits to check for reseller bot activity.</p>
                             </div>
                         </div>
                     </div>
@@ -155,11 +177,11 @@
                 <div id="analytics" class="tab-content">
                     <div class="grid-2col">
                         <div class="card glass">
-                            <h3>Customer Distribution</h3>
+                            <h3>Customer Segment Distribution</h3>
                             <div id="chart-pie" style="height: 400px;"></div>
                         </div>
                         <div class="card glass">
-                            <h3>Revenue by Segment</h3>
+                            <h3>Average Return Rate by Segment</h3>
                             <div id="chart-bar" style="height: 400px;"></div>
                         </div>
                     </div>
@@ -176,13 +198,14 @@
                                         <th>Persona</th>
                                         <th>Recency</th>
                                         <th>Frequency</th>
-                                        <th>Monetary</th>
+                                        <th>Net Spend</th>
+                                        <th>Return Rate</th>
                                         <th>Profile</th>
                                     </tr>
                                 </thead>
                                 <tbody id="customer-table-body">
                                     <tr>
-                                        <td colspan="6">No customer data loaded.</td>
+                                        <td colspan="7">No customer data loaded.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -202,7 +225,7 @@
                             <div class="csv-format">
                                 <strong>Required columns</strong>
                                 <span>InvoiceNo, InvoiceDate, Quantity, UnitPrice, CustomerID</span>
-                                <small>Optional columns like StockCode, Description, and Country are supported.</small>
+                                <small>Cancel Invoices (starting with 'C') representing returns are supported.</small>
                             </div>
                             <div class="upload-area" id="drop-zone" role="button" tabindex="0">
                                 <i data-lucide="file-up"></i>
@@ -220,7 +243,7 @@
                                 <i data-lucide="calculator"></i>
                                 <h3>Customer Persona Predictor</h3>
                             </div>
-                            <p class="tool-desc">Predict a customer's persona based on their RFM values.</p>
+                            <p class="tool-desc">Predict a customer's persona based on their shopping and return data.</p>
                             <form id="predictor-form" class="prism-form">
                                 <div class="form-group">
                                     <label>Recency (days)</label>
@@ -231,8 +254,12 @@
                                     <input type="number" id="pred-frequency" placeholder="e.g., 5" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Monetary (₹)</label>
+                                    <label>Net Spend (₹)</label>
                                     <input type="number" id="pred-monetary" placeholder="e.g., 15000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Return Rate (%)</label>
+                                    <input type="number" id="pred-return-rate" placeholder="e.g., 12.5" step="0.1" required>
                                 </div>
                                 <button type="submit" class="btn-primary full-width">Predict Persona</button>
                             </form>
@@ -245,23 +272,19 @@
                         <div class="card glass tool-card">
                             <div class="tool-header">
                                 <i data-lucide="user-x"></i>
-                                <h3>Churn Risk Predictor</h3>
+                                <h3>Customer Return Risk Predictor</h3>
                             </div>
-                            <p class="tool-desc">Estimate the probability of a customer churning based on their RFM data.</p>
+                            <p class="tool-desc">Estimate the probability of a customer returning future purchases.</p>
                             <form id="churn-predictor-form" class="prism-form">
                                 <div class="form-group">
-                                    <label>Recency (days)</label>
-                                    <input type="number" id="churn-recency" placeholder="e.g., 250" required>
-                                </div>
-                                <div class="form-group">
                                     <label>Frequency</label>
-                                    <input type="number" id="churn-frequency" placeholder="e.g., 1" required>
+                                    <input type="number" id="churn-frequency" placeholder="e.g., 5" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Monetary (₹)</label>
-                                    <input type="number" id="churn-monetary" placeholder="e.g., 100" required>
+                                    <label>Net Spend (₹)</label>
+                                    <input type="number" id="churn-monetary" placeholder="e.g., 15000" required>
                                 </div>
-                                <button type="submit" class="btn-primary full-width">Predict Churn</button>
+                                <button type="submit" class="btn-primary full-width">Predict Return Risk</button>
                             </form>
                             <div id="churn-prediction-result" class="insight-card glass" style="margin-top: 1rem; display: none;">
                                 <h4 id="churn-res-prediction">-</h4>
@@ -274,6 +297,7 @@
         </main>
     </div>
 
+    <script src="{{ url_for('static', filename='scanner.js') }}"></script>
     <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
     <script>lucide.createIcons();</script>
 </body>

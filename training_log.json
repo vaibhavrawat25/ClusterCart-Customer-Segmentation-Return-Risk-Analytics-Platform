@@ -1,10 +1,9 @@
 {
-    "last_trained_timestamp": "2026-05-11T10:06:55.297708",
+    "last_trained_timestamp": "2026-06-24T15:54:30.161693",
     "models_trained": [
-        "KMeans",
-        "LogisticRegression_Churn",
-        "BG/NBD_LTV",
-        "GammaGamma_LTV"
+        "DBSCAN_Clustering",
+        "KNN_Out_Of_Sample",
+        "LogisticRegression_ReturnRisk"
     ],
-    "churn_model_accuracy": 0.9676
+    "return_risk_model_accuracy": 0.3463
 }

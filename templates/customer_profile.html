@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PRISM | Customer Profile</title>
+    <title>RELOG | Customer Profile</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -11,8 +11,16 @@
     <div class="prism-app">
         <aside class="sidebar">
             <div class="brand">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="PRISM Logo" class="logo-img">
-                <h1>PRISM</h1>
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="RELOG Logo" class="logo-img">
+                <h1>RELOG</h1>
+            </div>
+            <!-- Quick Search Scanner -->
+            <div class="sidebar-search no-print">
+                <div class="search-input-wrapper">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="sidebar-search-input" placeholder="Scan Customer ID..." autocomplete="off">
+                </div>
+                <div id="scanner-feedback" style="display: none;"></div>
             </div>
             <nav class="side-nav">
                 <a href="/" class="nav-btn">
@@ -33,9 +41,14 @@
                 <div class="title-group">
                     <h2>Customer Deep Dive: <span class="customer-id">{{ customer_id }}</span></h2>
                 </div>
+                <div class="actions no-print">
+                    <button onclick="window.print()" class="btn-primary">
+                        <i data-lucide="printer"></i> Print PDF Report
+                    </button>
+                </div>
             </header>
 
-            <div class="profile-grid">
+            <div class="profile-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
                 <!-- Persona Card -->
                 <div class="kpi-card glass">
                     <div class="kpi-header">
@@ -45,28 +58,48 @@
                     <div class="value" id="profile-persona">{{ persona }}</div>
                 </div>
 
-                <!-- Churn Risk Card -->
+                <!-- Return Risk Card -->
                 <div class="kpi-card glass">
                     <div class="kpi-header">
                         <i data-lucide="user-x" class="icon-at-risk"></i>
-                        <span>Churn Risk</span>
+                        <span>Return Risk</span>
                     </div>
-                    <div class="value" id="profile-churn-risk">{{ churn_risk }}</div>
-                    <div class="sub-value">({{ churn_probability }}% Probability)</div>
+                    <div class="value" id="profile-return-risk">{{ return_risk }}</div>
+                    <div class="sub-value">({{ return_probability }}% Probability)</div>
                 </div>
 
-                <!-- Predicted LTV Card -->
+                <!-- Return Rate Card -->
+                <div class="kpi-card glass">
+                    <div class="kpi-header">
+                        <i data-lucide="arrow-left-right" class="icon-frequency"></i>
+                        <span>Return Rate</span>
+                    </div>
+                    <div class="value" id="profile-return-rate">{{ return_rate }}%</div>
+                </div>
+
+                <!-- Net Monetary Card -->
                 <div class="kpi-card glass">
                     <div class="kpi-header">
                         <i data-lucide="trending-up" class="icon-monetary"></i>
-                        <span>Predicted LTV (12-mo)</span>
+                        <span>Net Spend</span>
                     </div>
-                    <div class="value" id="profile-ltv">₹{{ predicted_ltv }}</div>
+                    <div class="value" id="profile-net-monetary">₹{{ net_monetary }}</div>
                 </div>
             </div>
 
-            <div class="card glass table-container">
-                <h3>Transaction History</h3>
+            <!-- Campaign Recommendation Card -->
+            <div class="card glass campaign-card" style="margin-top: 2rem; border-left: 5px solid #6366f1; padding: 1.5rem; border-radius: 16px;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <i data-lucide="target" style="color: #6366f1; width: 24px; height: 24px;"></i>
+                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-color);">Margin Optimization Recommendation</h3>
+                </div>
+                <p style="margin: 0; font-size: 1.05rem; color: var(--text-muted); line-height: 1.6; font-weight: 500;">
+                    {{ campaign_recommendation }}
+                </p>
+            </div>
+
+            <div class="card glass table-container" style="margin-top: 2rem;">
+                <h3>Transaction History (Purchases & Returns)</h3>
                 <table class="prism-table">
                     <thead>
                         <tr>
@@ -76,19 +109,21 @@
                             <th>Description</th>
                             <th>Quantity</th>
                             <th>Unit Price</th>
-                            <th>Total Price</th>
+                            <th>Total Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for tx in transactions %}
-                        <tr>
-                            <td>{{ tx.InvoiceNo }}</td>
+                        <tr style="{% if tx.Quantity < 0 %}color: #ef4444; background: rgba(239, 68, 68, 0.03);{% endif %}">
+                            <td style="font-weight: {% if tx.Quantity < 0 %}700{% else %}normal{% endif %};">{{ tx.InvoiceNo }}</td>
                             <td>{{ tx.InvoiceDate }}</td>
                             <td>{{ tx.StockCode }}</td>
                             <td>{{ tx.Description }}</td>
                             <td>{{ tx.Quantity }}</td>
                             <td>₹{{ "%.2f"|format(tx.UnitPrice) }}</td>
-                            <td>₹{{ "%.2f"|format(tx.TotalPrice) }}</td>
+                            <td>
+                                {% if tx.Quantity < 0 %}-{% endif %}₹{{ "%.2f"|format(tx.TotalPrice|abs) }}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -97,9 +132,9 @@
         </main>
     </div>
 
+    <script src="{{ url_for('static', filename='scanner.js') }}"></script>
     <script>
         lucide.createIcons();
-        // Simple theme toggle for this page
         const themeToggle = document.getElementById('theme-toggle');
         if (localStorage.getItem('theme') === 'dark') {
             document.body.className = 'dark-theme';

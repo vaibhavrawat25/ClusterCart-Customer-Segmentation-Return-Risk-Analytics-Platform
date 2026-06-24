@@ -1,0 +1,11 @@
+# RELOG Git Ignore Rules
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.ipynb_checkpoints/
+
+# Local database files
+data/*.db
+data/prism.db

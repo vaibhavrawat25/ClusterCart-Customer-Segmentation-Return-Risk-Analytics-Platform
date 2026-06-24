@@ -28,6 +28,7 @@ class PrismApiTestCase(unittest.TestCase):
             "SCALER_PATH": prism.SCALER_PATH,
             "MAP_PATH": prism.MAP_PATH,
             "DATA_PATH": prism.DATA_PATH,
+            "DB_PATH": prism.DB_PATH,
         }
         self.original_objects = {
             "model": prism.model,
@@ -39,6 +40,7 @@ class PrismApiTestCase(unittest.TestCase):
         prism.SCALER_PATH = os.path.join(self.temp_dir.name, "scaler.pkl")
         prism.MAP_PATH = os.path.join(self.temp_dir.name, "persona_map.pkl")
         prism.DATA_PATH = os.path.join(self.temp_dir.name, "rfm_segmented.csv")
+        prism.DB_PATH = os.path.join(self.temp_dir.name, "prism.db")
         prism.model = None
         prism.scaler = None
         prism.persona_map = None
@@ -94,6 +96,20 @@ class PrismApiTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("persona", response.get_json())
+
+    def test_customer_exists(self):
+        self.upload_csv(VALID_CSV)
+        # Check an existing customer (from VALID_CSV customer IDs e.g. 101)
+        response = self.client.get("/api/customer_exists/101")
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["exists"])
+
+        # Check a non-existent customer
+        response = self.client.get("/api/customer_exists/999")
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertFalse(payload["exists"])
 
 
 if __name__ == "__main__":

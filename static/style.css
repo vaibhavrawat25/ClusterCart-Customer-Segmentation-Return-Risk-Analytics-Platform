@@ -505,11 +505,33 @@ body {
 
 .persona-pill {
     display: inline-flex;
-    padding: 0.25rem 0.55rem;
+    padding: 0.25rem 0.65rem;
     border-radius: 999px;
-    background: var(--accent-glow);
-    color: #4f46e5;
     font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.persona-pill[data-persona="VIP Buyer"] {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.persona-pill[data-persona="Serial Returner"] {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.persona-pill[data-persona="Low-Value Buyer"] {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.persona-pill[data-persona="Unusual Activity Outlier"] {
+    background: rgba(139, 92, 246, 0.12);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .table-link {
@@ -641,3 +663,222 @@ input:checked + .slider:before { transform: translateX(18px); }
         height: 380px;
     }
 }
+
+/* Sidebar Search Scanner */
+.sidebar-search {
+    margin-bottom: 1.5rem;
+    padding: 0 0.5rem;
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input-wrapper input {
+    width: 100%;
+    padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+    background: var(--bg-color);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input-wrapper input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.search-input-wrapper .search-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.scanner-feedback {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Printer-Friendly PDF Report Layout */
+@media print {
+    /* Hide all non-printable/navigation containers */
+    .sidebar,
+    .theme-switch-container,
+    .no-print,
+    .top-bar .actions,
+    .top-bar .btn-secondary,
+    .nav-btn,
+    #theme-toggle,
+    .switch,
+    input[type="checkbox"] {
+        display: none !important;
+    }
+
+    /* Reset global layout & background colors for white paper */
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 11pt !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .prism-app {
+        display: block !important;
+        min-height: auto !important;
+    }
+
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-height: none !important;
+        overflow-y: visible !important;
+        display: block !important;
+    }
+
+    /* Print Header decoration */
+    .top-bar {
+        border-bottom: 2px solid #111111 !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 20px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    .top-bar h2 {
+        font-size: 18pt !important;
+        font-weight: 800 !important;
+        color: #000000 !important;
+    }
+
+    /* Reset card backgrounds & remove shadows for clean print rendering */
+    .glass,
+    .card,
+    .kpi-card,
+    .campaign-card {
+        background: #ffffff !important;
+        border: 1px solid #d1d5db !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        color: #000000 !important;
+        margin-bottom: 15px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border-radius: 8px !important;
+    }
+
+    /* Grid layouts side-by-side formatting */
+    .profile-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 12px !important;
+        padding: 0 !important;
+        margin-bottom: 20px !important;
+    }
+
+    .kpi-card {
+        padding: 12px !important;
+    }
+
+    .kpi-card .value {
+        font-size: 15pt !important;
+        font-weight: 800 !important;
+        color: #000000 !important;
+    }
+
+    .kpi-header {
+        font-size: 8.5pt !important;
+        color: #4b5563 !important;
+    }
+
+    .kpi-card .sub-value {
+        font-size: 7.5pt !important;
+        color: #4b5563 !important;
+    }
+
+    /* Campaign Recommendation Card */
+    .campaign-card {
+        border-left: 5px solid #111111 !important;
+        padding: 12px !important;
+    }
+
+    .campaign-card h3 {
+        font-size: 12pt !important;
+        font-weight: 700 !important;
+        color: #000000 !important;
+        margin-bottom: 4px !important;
+    }
+
+    .campaign-card p {
+        font-size: 9.5pt !important;
+        line-height: 1.5 !important;
+        color: #1f2937 !important;
+    }
+
+    /* Transaction History Table styling */
+    .table-container {
+        margin: 20px 0 0 0 !important;
+        padding: 0 !important;
+    }
+
+    .prism-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 9pt !important;
+    }
+
+    .prism-table th {
+        background-color: #f3f4f6 !important;
+        border-bottom: 2px solid #111111 !important;
+        color: #000000 !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 7.5pt !important;
+    }
+
+    .prism-table td {
+        border-bottom: 1px solid #e5e7eb !important;
+        padding: 5px 6px !important;
+        color: #000000 !important;
+    }
+
+    /* Highlight refund records on paper */
+    .prism-table tr[style*="color: #ef4444"] {
+        background-color: #fef2f2 !important;
+    }
+    
+    .prism-table tr[style*="color: #ef4444"] td {
+        color: #b91c1c !important;
+        font-weight: bold !important;
+    }
+
+    /* Print table headers on every page */
+    thead {
+        display: table-header-group !important;
+    }
+
+    tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+}
+
