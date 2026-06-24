@@ -9,3 +9,7 @@ __pycache__/
 # Local database files
 data/*.db
 data/prism.db
+
+# Project report (personal interview prep, not for GitHub public repo)
+PROJECT_REPORT.md
+
