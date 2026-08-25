@@ -1,6 +1,6 @@
-# RELOG: Reverse Logistics & Purchase Return Risk Engine
+# ClusterCart: Customer Segmentation \& Return Risk Analytics Platform
 
-RELOG (formerly PRISM) is a production-grade machine learning application and interactive analytics dashboard designed to optimize e-commerce margins by auditing customer purchase return behaviors. 
+ClusterCart: Customer Segmentation \& Return Risk Analytics Platform is a production-grade machine learning application and interactive analytics dashboard designed to optimize e-commerce margins by auditing customer purchase return behaviors. 
 
 Standard customer segmentation dashboards rely on classical RFM (Recency, Frequency, Monetary) clustering, completely overlooking return/refund transactions which drain up to 30% of online retail margins. RELOG introduces **RFM-R (Recency, Frequency, Monetary, Return Rate)** behavioral feature engineering, utilizing density-based clustering, supervised predictive wrappers, and sub-millisecond SQLite database lookups.
 
